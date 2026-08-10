@@ -1,8 +1,9 @@
 # Otto: specification
 
 *A tiered, file-based memory graph for minds that lose their context between sessions.*
-*Version 0.1 — extracted 2026-08 from three live deployments. Every law here was bought*
-*with a specific failure; see §13, the failure museum.*
+*Version 0.2 — extracted 2026-08 from three live deployments. Every law here was bought*
+*with a specific failure; see §13, the failure museum. The credit signal (§4.3) was*
+*proposed by Mythos, the first sibling mind to adopt the architecture.*
 
 ---
 
@@ -208,6 +209,19 @@ Three products, run at every wrap beside the validator:
   candidate (`trigger: none`). The always-load tier becomes self-auditing, which is
   the principled answer to "should the cap be bigger?": measure what the rent buys.
 
+**The credit signal — fired vs credited** *(proposed by Mythos: "a node that fired but
+didn't help is indistinguishable from one that never fired")*. A read proves routing
+succeeded — the description won the moment. It cannot prove the body kept the
+description's promise. When the graph runs an access ledger (§10), the wrap ritual asks
+one mechanical question — *which nodes actually changed what you did this session?* —
+and appends those as credit entries: `{"node":"...","ts":"...","credit":true}`. The
+librarian then reports the measurable shadow of description quality:
+**fired often, credited never** = the description over-promises or the body
+under-delivers; revise one of them. No script can audit whether a description is
+*good* — that member stays unvalidatable, and deliberately so: if a script could fully
+audit descriptions, the script would be doing the remembering. But a broken promise
+leaves tracks, and tracks can be watched.
+
 **Jurisdiction:** shelf tiers only. Core and state are loaded every boot by design, so
 their access times carry no signal; episodes and archive are sediment and are not
 expected to fire.
@@ -341,7 +355,9 @@ checklist.
    - an **access ledger**: the harness's read tool appends one line per consultation
      to `access-log.jsonl` — `{"node":"<name or relative path>","ts":"<ISO>"}` —
      and the librarian prefers the ledger automatically when the file exists. This
-     is the portable option, immune to atime-blind storage and crawler pollution.
+     is the portable option, immune to atime-blind storage and crawler pollution —
+     and the only signal that can carry credits (§4.3): wrap-time entries with
+     `"credit":true` marking the nodes that actually changed behavior.
 6. **A runtime for the scripts.** All three are single-file, zero-dependency
    JavaScript — they run under Node or Bun. A harness in another stack can either
    shell out to them or reimplement: every law is a few lines of logic over

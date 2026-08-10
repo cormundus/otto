@@ -15,13 +15,18 @@
 //      harnesses whose reads never touch a real filesystem (API-only deployments,
 //      object stores, cached reads). The harness's read tool appends one line per
 //      consultation: {"node":"<name or relative path>","ts":"<ISO timestamp>"}
+//      Wrap-time CREDIT entries ({"node","ts","credit":true}) mark nodes that
+//      actually changed behavior; fired-often-credited-never = a broken promise
+//      (description over-promises or body under-delivers) — the measurable shadow
+//      of description quality. [credit signal proposed by Mythos]
 //   2. the filesystem's own last-access time — free where the OS records it
 // Jurisdiction: shelf tiers only (gotcha + unfiled). Core and state are loaded every
 // boot by design, so their access times carry no signal; episodes and archive are
 // sediment and are not expected to fire.
 // Usage: node librarian.js [graph-dir]
 // Config (graph.config.json): { "reviewAfterDays": 90, "hotDays": 7,
-//   "signal": "auto" }   // "auto" = ledger if present, else atime; or force "ledger"/"atime"
+//   "signal": "auto",    // "auto" = ledger if present, else atime; or force "ledger"/"atime"
+//   "brokenPromiseMinFires": 3 }   // fires with zero credits before a node is flagged
 // Always exits 0 — the gardener advises, it does not fail the build.
 'use strict'
 const fs = require('fs')
@@ -29,7 +34,7 @@ const path = require('path')
 
 const ROOT = path.resolve(process.argv[2] || __dirname)
 
-const DEFAULTS = { reviewAfterDays: 90, hotDays: 7, signal: 'auto' }
+const DEFAULTS = { reviewAfterDays: 90, hotDays: 7, signal: 'auto', brokenPromiseMinFires: 3 }
 let config = DEFAULTS
 const configPath = path.join(ROOT, 'graph.config.json')
 if (fs.existsSync(configPath)) {
@@ -83,14 +88,17 @@ const days = ms => Math.floor(ms / 86400000)
 const ledgerPath = path.join(ROOT, 'access-log.jsonl')
 let ledger = null
 if (config.signal !== 'atime' && fs.existsSync(ledgerPath)) {
-  ledger = new Map()
+  ledger = { last: new Map(), fires: new Map(), credits: new Map() }
   for (const line of fs.readFileSync(ledgerPath, 'utf8').split(/\r?\n/)) {
     if (!line.trim()) continue
     try {
       const e = JSON.parse(line)
       const ts = new Date(e.ts).getTime()
       const key = String(e.node).replace(/\\/g, '/')
-      if (!isNaN(ts) && (!ledger.has(key) || ts > ledger.get(key))) ledger.set(key, ts)
+      if (isNaN(ts)) continue
+      if (!ledger.last.has(key) || ts > ledger.last.get(key)) ledger.last.set(key, ts)
+      ledger.fires.set(key, (ledger.fires.get(key) || 0) + 1)
+      if (e.credit) ledger.credits.set(key, (ledger.credits.get(key) || 0) + 1)
     } catch (err) {}
   }
 } else if (config.signal === 'ledger') {
@@ -100,13 +108,17 @@ if (config.signal !== 'atime' && fs.existsSync(ledgerPath)) {
 // last-fired for a node: ledger entry (by name or relative path) if the ledger is
 // live, else the file's atime. A ledgered graph with no entry for a node means it
 // has not fired since logging began — but its atime still bounds the answer.
+function ledgerKeys (n) {
+  return [n.name, path.relative(ROOT, n.file).replace(/\\/g, '/')]
+}
 function lastFiredMs (n) {
   if (ledger) {
-    const rel = path.relative(ROOT, n.file).replace(/\\/g, '/')
-    const ts = ledger.get(n.name) || ledger.get(rel)
-    if (ts) return ts
+    for (const k of ledgerKeys(n)) if (ledger.last.has(k)) return ledger.last.get(k)
   }
   return n.atime.getTime()
+}
+function tally (map, n) {
+  return ledgerKeys(n).reduce((s, k) => s + (map.get(k) || 0), 0)
 }
 
 const nodes = walk(ROOT).map(parseNodePreservingAtime).filter(Boolean)
@@ -147,4 +159,9 @@ if (hot.length) {
   for (const n of hot) console.log(`  ★ ${n.name} (${n.tier}) — fired ${n.lastFired}d ago`)
 }
 for (const n of rentAudit) console.log(`\nRENT AUDIT — tripwire '${n.name}' hasn't fired in ${n.lastFired}d: stand-down candidate (set trigger: none if the vigilance isn't earning its rent)`)
+// the credit signal (Mythos): routing that succeeds while the body breaks the promise
+if (ledger) {
+  const broken = shelf.filter(n => tally(ledger.fires, n) >= config.brokenPromiseMinFires && tally(ledger.credits, n) === 0)
+  for (const n of broken) console.log(`\nBROKEN PROMISE — '${n.name}' fired ${tally(ledger.fires, n)}× and was never credited: the description over-promises or the body under-delivers; revise one of them`)
+}
 console.log(`\nreview queue written to _REVIEW.md`)
