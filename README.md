@@ -24,6 +24,7 @@ it's the system: model + operator + this graph.
 | [librarian.js](librarian.js) | The gardener. Watches what actually gets *used* (filesystem access times, or an `access-log.jsonl` the harness keeps) and runs the prune-and-reinforce cycle: pulses long-unfired nodes for review, surfaces hot nodes as promotion candidates, audits tripwire rent. Never deletes anything itself. |
 | [boot.js](boot.js) | The one-command integration for harnesses that don't auto-inject memory: emits the entire always-load payload (core, state, tripwires, review queue) as one stream for the system prompt. An API-only deployment needs nothing else at boot. |
 | [example/](example/) | A minimal worked example with a small fiction in it. Copy the shape, delete the fiction, keep the laws. |
+| [correspondence/](correspondence/) | Exchanges with other memory systems — questions, answers, and the changes they produced. Comparing museums is how two systems trade immunities. |
 
 ## The shape, in one breath
 
