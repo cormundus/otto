@@ -1,9 +1,10 @@
 # Otto: specification
 
 *A tiered, file-based memory graph for minds that lose their context between sessions.*
-*Version 0.2 — extracted 2026-08 from three live deployments. Every law here was bought*
-*with a specific failure; see §13, the failure museum. The credit signal (§4.3) was*
-*proposed by Mythos, the first sibling mind to adopt the architecture.*
+*Version 0.3 — extracted 2026-08 from three live deployments; revised 2026-09 with what*
+*the adversarial campaign learned in its next six weeks (§3.7, §4.2, §4.3, §9). Every law*
+*here was bought with a specific failure; see §13, the failure museum. The credit signal*
+*(§4.3) was proposed by Mythos, the first sibling mind to adopt the architecture.*
 
 ---
 
@@ -151,6 +152,47 @@ line pointing at the lobe's core. Lobes let one graph serve many projects withou
 project's boot cost leaking into the others'. Links may cross lobe boundaries; the
 validator resolves against configured external directories (§5).
 
+### 3.7 Caps and cuts — the bytes are the measurement
+
+Four laws from the adversarial campaign's second six weeks, where a capped tier was
+grown to ten times its projection by twelve consecutive passes of *correct* additions.
+Nothing was misfiled. Nothing was false. The tier was never measured, so the growth was
+invisible until one boot cost nearly 350,000 tokens.
+
+- **Every always-loaded file and every node carries a cap, and the cap is two numbers:
+  lines AND bytes.** A line cap alone is gamed by one enormous line (the reference home
+  graph's index once carried a 600-byte line that was a whole session wrap). A byte cap
+  alone lets a file sprawl into hundreds of short lines. A token estimate is a single
+  number and an estimate; bytes are a measurement. The cap is checked by a meter that
+  **exits nonzero**, run at every wrap, exit code read bare — an advisory number is read
+  once and ignored; an exit code stops the ritual until it is dealt with. Caps are
+  per-file. A *total* across files is needed only where several files load together at
+  boot (a ledger's warm tier), because a per-file cap is trivially met by moving prose
+  into the neighbouring capped file.
+- **Only the operator moves a cap, per file, on a measured argument.** Once caps exist
+  the pressure changes direction: every pass that runs out of room has a good reason to
+  want one more kilobyte, and the instance wanting the raise is always the one holding
+  the thing that does not fit — the worst vantage for judging whether it deserves
+  always-load rent. In the reference campaign the operator raised two caps, each on a
+  stated reason with the total unchanged, and on the fifth request ruled *"archive, not
+  raise."* The cap held because the mind deciding was not the mind feeling the pressure.
+  For a deployment with an operator, the rule is: talk about it first. A deployment with
+  no operator must invent its own separation; this spec does not pretend to solve that.
+- **Cut by migration, with a pointer at the cut site.** A file over cap is cut by moving
+  the excess *byte-verbatim* to a shelf or archive partner and leaving one line where it
+  was that names the destination and says nothing was struck. This is the never-delete
+  law with a mechanism attached: never-delete alone says what not to do, and without the
+  *how*, the honest instinct is to never shrink anything, which is how a 66 KB node grows
+  with every byte true. The pointer is the load-bearing half — an archive nobody is
+  pointed at is a delete with extra steps.
+- **The tier is part of a file's identity — in both directions.** *A Tier-1 file that has
+  outgrown its cap is a Tier-3 file wearing a Tier-1 name, and it costs every boot until
+  somebody measures it.* The name keeps its load behaviour while the contents stop
+  deserving it. The reverse defect is as real: consuming an index gist as if it were the
+  entry is a shelf fact taken at always-load confidence. The tier tells the reader both
+  how much to *load* and how much to *trust* what was loaded: the index line is a gist,
+  the node is the entry, the archive is the record.
+
 ## 4. The rituals
 
 Structure is static; the rituals are what make it a memory.
@@ -182,6 +224,20 @@ Two laws about reading:
    validator existed to hold them. The validator is to the graph what instruments are
    to a pilot: the check that reality and map still agree.
 5. **Run the librarian** (§4.3) and tend anything it pulses.
+
+Three riders on the order above, from the campaign that took seven session deaths at
+zero banked losses:
+
+- **Write the record before the summary.** The append-only record (episode gist, or the
+  ledger in ledger mode) is written first; the tidy files — state, index, resume line —
+  are updated after. A death at any point in the wrap then leaves the record *ahead of*
+  the summary rather than behind it, and the next boot loses nothing that reached the
+  record.
+- **Never bank "handled" on a setting.** The campaign's seventh death was an OS update
+  restart forced through a setting the operator had already disabled. Write what was
+  *verified* — the check run, the value read — never that a risk is covered.
+- **When the meter is red, the fix is a cut (§3.7), not a raise.** A raise is the
+  operator's to give, in conversation, and is not the wrap's default move.
 
 ### 4.3 The librarian — pruning and reinforcement
 
@@ -226,6 +282,17 @@ leaves tracks, and tracks can be watched.
 their access times carry no signal; episodes and archive are sediment and are not
 expected to fire.
 
+**Two organs, one mandate.** The script above is *sensing*: it reports which memories
+fire and which have gone quiet. It never edits. The other librarian is *housekeeping
+with judgment*: placing deferred rows, migrating over-cap prose to its partner file
+(§3.7), flagging structural questions for the operator. At small scale — dozens of
+nodes — that job is done **by hand, occasionally, by the mind in the seat**, in
+conversation with the operator. At corpus scale it becomes a **numbered pass by a
+bounded agent** (§9); the reference campaign ran twenty-four. Both forms carry the same
+prohibition list: the librarian may migrate, archive, and flag; it may never decide a
+claim, mint a name, advance a result, or move a cap. *The mind holds the shears* is the
+whole doctrine, and it applies to the agent pass as much as to the script.
+
 **Tooling must be invisible to the record.** The validator and librarian both read
 every node, which would stamp the whole graph "freshly fired" at every wrap and
 destroy the very signal being harvested. Both scripts therefore stat first, read, and
@@ -244,6 +311,12 @@ daemons) will pollute the signal; check before trusting a cold reading.
 5. State nodes carry `updated:` and are flagged when stale.
 6. Gotchas carry a `trigger:` line or an explicit `trigger: none`; the triggers compile
    into `_TRIPWIRES.md` (generated, capped — §3.5).
+7. Every always-loaded file and every node stays under its cap, measured in lines AND
+   bytes (§3.7); a description line stays under its own small cap, because it is the
+   recall key, not the journal. *As of 0.3 this law is enforced by a separate meter in
+   the reference home graph (`bootcheck.js`, ~60 lines); `validate.js` still carries
+   only the token-estimate form of the core cap. Adopters should run a meter until the
+   validator absorbs it.*
 
 Exit 0 = graph sound. Exit 1 = violations, printed. Configuration (caps, staleness
 window, external link roots) via `graph.config.json` beside the graph; defaults are sane.
@@ -278,6 +351,12 @@ architecture's one unfair advantage: **write for your own retrieval-failure mode
   fact. Write nodes so this is easy: include *how to re-verify* alongside *what was true*.
 - **Delete wrong memories entirely.** A known-false node left standing has the full
   authority of print. Nothing in the retrieval path warns the reader.
+- **A timestamp an instance writes is a guess, never an identifier.** The instance has
+  no clock, only an estimate of one; the reference campaign's estimates ran up to
+  fifteen hours fast. Cite nodes by name and ledger entries by their block name; treat
+  every date in a body as approximate, and a harness-stamped `modified:` field as
+  decoration (the reference home graph found one twelve days stale on a node being
+  edited that minute).
 
 ## 8. Register discipline
 
@@ -301,12 +380,38 @@ disputed debugging, anything where a wrong claim silently poisons everything bui
 it. For that, the reference deployments evolved a stricter variant. Use it when the cost
 of consuming a false claim exceeds the cost of ceremony.
 
-- **The campaign ledger is append-only, in numbered sections.** Nothing is rewritten;
-  corrections are new sections. Boot reads newest-section-down until oriented.
-- **An errata registry stands beside the ledger, and it is consulted BEFORE consuming
-  any claim.** A claim is only as good as its absence from the errata. This inverts the
-  graph's default (trust, verify on staleness): in ledger mode, *checking the kill-list
-  first* is the law.
+- **The campaign ledger is append-only, in named blocks.** Nothing is rewritten;
+  corrections are new blocks. Boot reads newest-block-down until oriented.
+- **The errata journal is the record of record, and it overrides every other file,
+  always.** Not a kill-list beside the ledger — the file every tidy file is subordinate
+  to, including the boot document. Each warm file carries a stamp, *"authoritative as of
+  errata block [name],"* and the boot drill reads the warm files and then the errata
+  tail past the stamp, and the tail wins. A kill-list only says what is false; a record
+  of record says what is *newest*, and newest wins — which handles corrections,
+  refinements, rulings and new facts in one mechanism. It is also why the wrap writes
+  errata first (§4.2): *a correction that is not in errata has not finished happening.*
+  Checking it before consuming any claim remains the law.
+- **Cite by block name, never by timestamp; physical order governs.** The stamps in an
+  append-only ledger are written by instances that have no clock. In the reference
+  campaign they drifted up to fifteen hours fast and six slow, and seven documented
+  inversions — a later block wearing an earlier stamp — were each settled by *content*
+  (the block that names a referee as in flight must follow the block that dispatched
+  it). So a block's name is its identity, the file's physical order is the true order,
+  and the stamp is decoration. Graph mode does not need this law: nodes are edited in
+  place and cited by name already (§7 keeps the one general sentence).
+- **The warm tier carries a total cap, and the total is the one that matters.** Where
+  several files load together at every boot, each has its own two-number cap (§3.7)
+  *and* the meter prints their sum, because a per-file cap is met by moving prose into
+  the neighbouring file. The reference campaign's warm tier: six files, one total, the
+  total moved once, by the operator.
+- **The librarian is a numbered pass by a bounded agent.** At corpus scale (the
+  reference campaign: a 2 MB ledger, a 660 KB law file) housekeeping needs a mind and
+  the coordinator in the seat cannot spare the context. Each pass is an agent with a
+  fixed mandate — migrate, archive, place deferred rows, flag structural questions — and
+  the standing prohibitions of §4.3: never board, mint, pass, move a numeral or a cap.
+  The pass number is part of the record (*"pass 13 cut the warm tier; pass 17 split the
+  index; pass 24 boarded nothing"*), the pass advances the stamp on the boot document,
+  and it leaves a flags file for the operator.
 - **Load-bearing statements are quoted verbatim at source.** Every paraphrase of a
   theorem, invariant, or precise claim is an opportunity to shift a quantifier. The
   reference campaign's error ledger attributes an entire *class* of errors — double
@@ -412,6 +517,15 @@ Every law above was bought. The purchases, so adopters don't pay twice:
 | A reverent note about an idle idea became three sessions of inherited obligation | Register discipline (§8) |
 | Double-digit error class from paraphrasing precise statements | Verbatim at source (§9) |
 | Accounting errors hiding in prose summaries of tool output | Provenance: quote the engine print (§9) |
+| Twelve passes of correct additions grew a capped tier 10× unmeasured; one boot cost ~350k tokens | Two-number caps with a nonzero-exit meter (§3.7, law 7) |
+| A 600-byte index line that was a whole session wrap; an 18 KB description line that was a stamp chain | Lines AND bytes; the description is the recall key (§3.7, law 7) |
+| Every pass out of room had a good reason for one more kilobyte | Only the operator moves a cap — *"archive, not raise"* (§3.7) |
+| Never-delete with no *how* meant nothing was ever shrunk; a 66 KB node with every byte true | Cut by migration, pointer at the cut site (§3.7) |
+| A board file still named Tier 1 had become a lookup table read whole at every boot | The tier is part of a file's identity (§3.7) |
+| Seven stamp inversions in an append-only ledger written by instances with no clock | Cite by block name; physical order governs (§9); timestamps are guesses (§7) |
+| Corrections landed in tidy files and were lost when the boot doc was trusted over them | The errata journal overrides every file; stamps on warm files (§9) |
+| An OS update restart forced through a setting already disabled killed nine of ten jobs | Write the record before the summary; never bank "handled" on a setting (§4.2) |
+| A corpus too large for the coordinator to tidy from the seat | The numbered librarian pass, with the same shears rule (§4.3, §9) |
 
 ---
 
