@@ -9,10 +9,15 @@
 //   5. state nodes carry an `updated:` stamp and are flagged when stale
 //   6. gotchas carry a `trigger:` line (or an explicit `trigger: none`); the triggers
 //      compile into _TRIPWIRES.md — always-loaded pointers that fire BEFORE the trap
+//   7. caps are two numbers, lines AND bytes (SPEC §3.7): _CORE.md under coreLineCap and
+//      coreByteCap; every non-archive node under nodeByteCap; every description line under
+//      descByteCap (it is the recall key, not the journal). THE BYTES ARE THE MEASUREMENT.
 // Usage: node validate.js [graph-dir]     (defaults to the script's own directory)
 // Config: optional graph.config.json in the graph dir:
-//   { "coreTokenCap": 2800, "stateStaleDays": 7, "externalLinkDirs": ["../"],
-//     "allowForwardLinks": false, "tripwireTokenCap": 600 }
+//   { "coreTokenCap": 2800, "coreLineCap": 200, "coreByteCap": 12288, "nodeByteCap": 24576,
+//     "descByteCap": 400, "stateStaleDays": 7, "externalLinkDirs": ["../"],
+//     "allowForwardLinks": false, "tripwireTokenCap": 600,
+//     "excludeDirs": ["some-lobe", "_archive"] }   // subdirs this run does not walk
 // Exit 0 = graph sound. Exit 1 = violations (printed). Run at every session wrap.
 'use strict'
 const fs = require('fs')
@@ -20,7 +25,7 @@ const path = require('path')
 
 const ROOT = path.resolve(process.argv[2] || __dirname)
 
-const DEFAULTS = { coreTokenCap: 2800, stateStaleDays: 7, externalLinkDirs: [], allowForwardLinks: false, tripwireTokenCap: 600 }
+const DEFAULTS = { coreTokenCap: 2800, coreLineCap: 200, coreByteCap: 12288, nodeByteCap: 24576, descByteCap: 400, stateStaleDays: 7, externalLinkDirs: [], allowForwardLinks: false, tripwireTokenCap: 600, excludeDirs: [] }
 let config = DEFAULTS
 const configPath = path.join(ROOT, 'graph.config.json')
 if (fs.existsSync(configPath)) {
@@ -34,7 +39,7 @@ function walk (dir) {
   const out = []
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name)
-    if (e.isDirectory()) out.push(...walk(p))
+    if (e.isDirectory()) { if (!config.excludeDirs.includes(e.name)) out.push(...walk(p)) }
     else if (e.name.endsWith('.md') && e.name !== 'GRAPH.md' && e.name !== '_TRIPWIRES.md' && e.name !== '_REVIEW.md') out.push(p)
   }
   return out
@@ -72,7 +77,7 @@ function parseNode (file) {
   }
   const body = raw.slice(m[0].length)
   const links = [...body.matchAll(/\[\[([a-z0-9-]+)(?:\|[^\]]*)?\]\]/gi)].map(x => x[1])
-  return { file, name: fm.name, description: fm.description, tier: tierOf(file, fm), updated: fm.updated, trigger: fm.trigger, links, chars: raw.length }
+  return { file, name: fm.name, description: fm.description, tier: tierOf(file, fm), updated: fm.updated, trigger: fm.trigger, links, chars: raw.length, bytes: Buffer.byteLength(raw, 'utf8'), lines: raw.split(/\r?\n/).length }
 }
 
 // links may legitimately point OUTSIDE this graph (a parent constellation, sibling lobes).
@@ -131,6 +136,21 @@ if (!core) problems.push('no _CORE.md (core tier) node found')
 else {
   const tokens = Math.round(core.chars / 4)
   if (tokens > config.coreTokenCap) problems.push(`_CORE.md ≈${tokens} tokens > cap ${config.coreTokenCap} — demote something to state/gotchas/episodes`)
+}
+
+// law 7: caps are two numbers — lines AND bytes (SPEC §3.7). A line cap alone is gamed by
+// one enormous line; a byte cap alone lets a file sprawl; a token count is an estimate.
+// Archive is exempt (grep-only by design); every other tier is capped per file.
+if (core) {
+  if (core.lines > config.coreLineCap) problems.push(`_CORE.md ${core.lines} lines > cap ${config.coreLineCap}`)
+  if (core.bytes > config.coreByteCap) problems.push(`_CORE.md ${core.bytes} B > cap ${config.coreByteCap}`)
+}
+for (const n of nodes) {
+  if (n.error || n.tier === 'archive') continue
+  const rel = path.relative(ROOT, n.file)
+  if (n.bytes > config.nodeByteCap) problems.push(`${rel}: ${n.bytes} B > node cap ${config.nodeByteCap} — cut by migration, pointer at the cut site (§3.7)`)
+  const d = Buffer.byteLength(n.description || '', 'utf8')
+  if (d > config.descByteCap) problems.push(`${rel}: description ${d} B > cap ${config.descByteCap} — the description is the recall key, not the journal; migrate the rest into the body`)
 }
 
 // law 5: state freshness

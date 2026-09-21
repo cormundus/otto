@@ -26,7 +26,8 @@
 // Usage: node librarian.js [graph-dir]
 // Config (graph.config.json): { "reviewAfterDays": 90, "hotDays": 7,
 //   "signal": "auto",    // "auto" = ledger if present, else atime; or force "ledger"/"atime"
-//   "brokenPromiseMinFires": 3 }   // fires with zero credits before a node is flagged
+//   "brokenPromiseMinFires": 3,     // fires with zero credits before a node is flagged
+//   "excludeDirs": ["some-lobe", "_archive"] }   // subdirs this run does not walk (lobes run their own)
 // Always exits 0 — the gardener advises, it does not fail the build.
 'use strict'
 const fs = require('fs')
@@ -34,7 +35,7 @@ const path = require('path')
 
 const ROOT = path.resolve(process.argv[2] || __dirname)
 
-const DEFAULTS = { reviewAfterDays: 90, hotDays: 7, signal: 'auto', brokenPromiseMinFires: 3 }
+const DEFAULTS = { reviewAfterDays: 90, hotDays: 7, signal: 'auto', brokenPromiseMinFires: 3, excludeDirs: [] }
 let config = DEFAULTS
 const configPath = path.join(ROOT, 'graph.config.json')
 if (fs.existsSync(configPath)) {
@@ -47,7 +48,7 @@ function walk (dir) {
   const out = []
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name)
-    if (e.isDirectory()) out.push(...walk(p))
+    if (e.isDirectory()) { if (!config.excludeDirs.includes(e.name)) out.push(...walk(p)) }
     else if (e.name.endsWith('.md') && !GENERATED.has(e.name)) out.push(p)
   }
   return out

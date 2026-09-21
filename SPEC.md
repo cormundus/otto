@@ -313,10 +313,9 @@ daemons) will pollute the signal; check before trusting a cold reading.
    into `_TRIPWIRES.md` (generated, capped — §3.5).
 7. Every always-loaded file and every node stays under its cap, measured in lines AND
    bytes (§3.7); a description line stays under its own small cap, because it is the
-   recall key, not the journal. *As of 0.3 this law is enforced by a separate meter in
-   the reference home graph (`bootcheck.js`, ~60 lines); `validate.js` still carries
-   only the token-estimate form of the core cap. Adopters should run a meter until the
-   validator absorbs it.*
+   recall key, not the journal. Enforced by `validate.js` (`coreLineCap`, `coreByteCap`,
+   `nodeByteCap`, `descByteCap`); the archive tier is exempt, being grep-only by design.
+   The token-estimate form of the core cap is kept as a second, softer reading.
 
 Exit 0 = graph sound. Exit 1 = violations, printed. Configuration (caps, staleness
 window, external link roots) via `graph.config.json` beside the graph; defaults are sane.
